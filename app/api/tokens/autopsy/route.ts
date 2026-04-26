@@ -119,6 +119,76 @@ function estimatePeakMarketCap(
   );
 }
 
+function classifyDegradedToken(
+  current: ReturnType<typeof classify>,
+  metrics: ReturnType<typeof computeMetrics>,
+  market: {
+    peakMcap: number;
+    marketCap: number;
+    volume24h: number;
+    holders: number;
+    liquidity: number;
+    priceChange24hPercent: number;
+  },
+  indexedToken?: DeadToken
+): ReturnType<typeof classify> {
+  if (current.verdict !== "STILL ALIVE") return current;
+
+  if (indexedToken && indexedToken.verdict !== "STILL ALIVE") {
+    return {
+      verdict: indexedToken.verdict,
+      cause: indexedToken.cause,
+      brutalityScore: indexedToken.brutalityScore,
+      timeToDeathHours: indexedToken.timeToDeathHours,
+    };
+  }
+
+  if (
+    market.peakMcap > 0 &&
+    market.peakMcap < 10_000 &&
+    (market.volume24h < 100 || market.holders < 50)
+  ) {
+    return {
+      verdict: "FAILED LAUNCH",
+      cause: "Real Birdeye data shows sub-$10k market cap with dried-up launch activity",
+      brutalityScore: Math.max(25, Math.round(metrics.priceDropPct / 2)),
+      timeToDeathHours: Math.max(1, Math.round(metrics.ageHours * 10) / 10),
+    };
+  }
+
+  if (
+    (market.priceChange24hPercent <= -70 || metrics.priceDropPct >= 70) &&
+    market.volume24h <= Math.max(1_000, market.marketCap * 0.05) &&
+    market.liquidity <= Math.max(5_000, market.marketCap * 0.1)
+  ) {
+    return {
+      verdict: "SLOW BLEED",
+      cause: "Real Birdeye data shows severe drawdown with weak volume and thin liquidity",
+      brutalityScore: Math.min(
+        95,
+        Math.max(
+          50,
+          Math.round(
+            Math.max(metrics.priceDropPct, Math.abs(market.priceChange24hPercent))
+          )
+        )
+      ),
+      timeToDeathHours: Math.max(24, Math.round(metrics.ageHours * 10) / 10),
+    };
+  }
+
+  if (market.marketCap >= 50_000 && market.holders >= 100 && market.volume24h <= 10) {
+    return {
+      verdict: "ABANDONED",
+      cause: "Real Birdeye data shows meaningful holder count with near-zero 24h volume",
+      brutalityScore: 60,
+      timeToDeathHours: Math.max(24, Math.round(metrics.ageHours * 10) / 10),
+    };
+  }
+
+  return current;
+}
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const address = searchParams.get("address") ?? "";
@@ -131,11 +201,11 @@ export async function GET(request: Request) {
   }
 
   purgeDemoData();
+  const indexedToken = getDeadTokenByAddress(address);
 
   const apiKey = process.env.BIRDEYE_API_KEY;
 
   if (!apiKey) {
-    const indexedToken = getDeadTokenByAddress(address);
     if (indexedToken) {
       return buildCachedAutopsy(indexedToken);
     }
@@ -149,7 +219,6 @@ export async function GET(request: Request) {
     // Birdeye endpoint: /defi/token_overview
     const overview = await getTokenOverview(address);
     if (!overview) {
-      const indexedToken = getDeadTokenByAddress(address);
       if (indexedToken) {
         return buildCachedAutopsy(indexedToken);
       }
@@ -216,7 +285,19 @@ export async function GET(request: Request) {
       peakMcap: peakMarketCap,
     });
 
-    const result = classify(metrics);
+    const result = classifyDegradedToken(
+      classify(metrics),
+      metrics,
+      {
+        peakMcap: peakMarketCap,
+        marketCap,
+        volume24h,
+        holders,
+        liquidity,
+        priceChange24hPercent: safeNumber(overview.priceChange24hPercent),
+      },
+      indexedToken
+    );
 
     const token: DeadToken = {
       address,
@@ -224,17 +305,23 @@ export async function GET(request: Request) {
       name: safeText(overview.name, "Unknown Solana Token"),
       verdict: result.verdict,
       cause: result.cause,
-      oneLiner: getOneLiner(result.verdict),
-      bornAt: createdAtSeconds
-        ? createdAtSeconds * 1000
-        : Date.now() - result.timeToDeathHours * 60 * 60 * 1000,
+      oneLiner:
+        indexedToken?.verdict === result.verdict
+          ? indexedToken.oneLiner
+          : getOneLiner(result.verdict),
+      bornAt:
+        indexedToken?.verdict === result.verdict
+          ? indexedToken.bornAt
+          : createdAtSeconds
+            ? createdAtSeconds * 1000
+            : Date.now() - result.timeToDeathHours * 60 * 60 * 1000,
       diedAt:
-        result.verdict === "STILL ALIVE" ? 0 : Date.now(),
-      peakMcap: metrics.peakMcap,
+        result.verdict === "STILL ALIVE" ? 0 : indexedToken?.diedAt || Date.now(),
+      peakMcap: Math.max(metrics.peakMcap, indexedToken?.peakMcap ?? 0),
       finalMcap: marketCap,
       liquidityRemovedPct: metrics.liquidityRemovedPct,
       holdersBagged: holders,
-      priceDropPct: metrics.priceDropPct,
+      priceDropPct: Math.max(metrics.priceDropPct, indexedToken?.priceDropPct ?? 0),
       timeToDeathHours: result.timeToDeathHours,
       brutalityScore: result.brutalityScore,
       logoUri: overview.logoURI,
@@ -261,7 +348,6 @@ export async function GET(request: Request) {
 
     return NextResponse.json(autopsyResult);
   } catch {
-    const indexedToken = getDeadTokenByAddress(address);
     if (indexedToken) {
       return buildCachedAutopsy(indexedToken);
     }
