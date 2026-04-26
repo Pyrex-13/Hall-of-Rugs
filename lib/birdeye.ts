@@ -1,4 +1,5 @@
 import fs from "fs";
+import os from "os";
 import path from "path";
 import { getCachedResponse, setCachedResponse } from "./db";
 import type {
@@ -11,7 +12,10 @@ import type {
 } from "./types";
 
 const BIRDEYE_BASE = "https://public-api.birdeye.so";
-const LOG_FILE = path.join(process.cwd(), "api_calls.log");
+const LOG_FILES = [
+  path.join(process.cwd(), "api_calls.log"),
+  path.join(os.tmpdir(), "api_calls.log"),
+];
 
 function getApiKey(): string | undefined {
   return process.env.BIRDEYE_API_KEY;
@@ -24,15 +28,16 @@ function logApiCall(
 ): void {
   const timestamp = new Date().toISOString();
   const line = `[${timestamp}] [${endpoint}] [${tokenAddress}] [${statusCode}]\n`;
-  try {
-    fs.appendFileSync(LOG_FILE, line);
-  } catch {
+  for (const logFile of LOG_FILES) {
     try {
-      fs.writeFileSync(LOG_FILE, line);
+      fs.appendFileSync(logFile, line);
+      return;
     } catch {
-      console.error("Failed to write API log:", line);
+      continue;
     }
   }
+
+  console.warn("Failed to write API log:", line);
 }
 
 async function birdeyeFetch<T>(
