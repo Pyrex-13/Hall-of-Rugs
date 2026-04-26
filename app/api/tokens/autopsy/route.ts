@@ -83,14 +83,22 @@ function buildOverviewPriceHistory(
     .filter((point) => Number.isFinite(point.close));
 }
 
-function estimatePeakMarketCap(
+function currentMarketCap(overview: BirdeyeTokenOverview): number {
+  const price = safeNumber(overview.price);
+  const supply = safeNumber(overview.supply);
+  return safeNumber(
+    overview.mc,
+    safeNumber(overview.realMc, supply > 0 && price > 0 ? supply * price : 0)
+  );
+}
+
+function maxObservedPrice(
   overview: BirdeyeTokenOverview,
   priceHistory: OHLCVPoint[]
 ): number {
   const currentPrice = safeNumber(overview.price);
-  const currentMarketCap = safeNumber(overview.mc, safeNumber(overview.realMc));
-  const historicalPrices = [
-    ...priceHistory.map((point) => point.close),
+  const prices = [
+    ...priceHistory.flatMap((point) => [point.high, point.close, point.open]),
     overview.history24hPrice,
     overview.history12hPrice,
     overview.history8hPrice,
@@ -103,16 +111,25 @@ function estimatePeakMarketCap(
   ]
     .map((value) => safeNumber(value, NaN))
     .filter((value) => Number.isFinite(value) && value > 0);
-  const maxObservedPrice = Math.max(currentPrice, ...historicalPrices);
+  return Math.max(currentPrice, ...prices);
+}
+
+function estimatePeakMarketCap(
+  overview: BirdeyeTokenOverview,
+  priceHistory: OHLCVPoint[]
+): number {
+  const currentPrice = safeNumber(overview.price);
+  const liveMarketCap = currentMarketCap(overview);
+  const peakPrice = maxObservedPrice(overview, priceHistory);
   const supply = safeNumber(overview.supply);
-  const priceDerivedPeak = supply > 0 ? maxObservedPrice * supply : 0;
+  const priceDerivedPeak = supply > 0 ? peakPrice * supply : 0;
   const currentScaledPeak =
-    currentPrice > 0 && currentMarketCap > 0
-      ? currentMarketCap * (maxObservedPrice / currentPrice)
+    currentPrice > 0 && liveMarketCap > 0
+      ? liveMarketCap * (peakPrice / currentPrice)
       : 0;
 
   return Math.max(
-    currentMarketCap,
+    liveMarketCap,
     safeNumber(overview.realMc),
     priceDerivedPeak,
     currentScaledPeak
@@ -268,7 +285,7 @@ export async function GET(request: Request) {
     const priceData = await getTokenPrice(address);
 
     const liquidity = safeNumber(overview.liquidity);
-    const marketCap = safeNumber(overview.mc);
+    const marketCap = currentMarketCap(overview);
     const volume24h = safeNumber(overview.v24hUSD);
     const holders = safeNumber(overview.holder);
     const price = safeNumber(overview.price);
@@ -286,7 +303,7 @@ export async function GET(request: Request) {
       v24hUSD: volume24h,
       holder: holders,
       price,
-      history24hPrice,
+      history24hPrice: Math.max(history24hPrice, maxObservedPrice(overview, priceHistory)),
       createdAt: createdAtSeconds
         ? createdAtSeconds * 1000
         : undefined,

@@ -26,13 +26,18 @@ function safeText(value: unknown, fallback: string): string {
     : fallback;
 }
 
-function estimatePeakMarketCap(overview: BirdeyeTokenOverview): number {
-  const currentPrice = safeNumber(overview.price);
-  const currentMarketCap = safeNumber(
+function currentMarketCap(overview: BirdeyeTokenOverview): number {
+  const price = safeNumber(overview.price);
+  const supply = safeNumber(overview.supply);
+  return safeNumber(
     overview.mc,
-    safeNumber(overview.realMc, safeNumber(overview.liquidity) * 10)
+    safeNumber(overview.realMc, supply > 0 && price > 0 ? supply * price : safeNumber(overview.liquidity) * 10)
   );
-  const historicalPrices = [
+}
+
+function maxOverviewPrice(overview: BirdeyeTokenOverview): number {
+  const currentPrice = safeNumber(overview.price);
+  const prices = [
     overview.history24hPrice,
     overview.history12hPrice,
     overview.history8hPrice,
@@ -45,16 +50,22 @@ function estimatePeakMarketCap(overview: BirdeyeTokenOverview): number {
   ]
     .map((value) => safeNumber(value, NaN))
     .filter((value) => Number.isFinite(value) && value > 0);
-  const maxObservedPrice = Math.max(currentPrice, ...historicalPrices);
+  return Math.max(currentPrice, ...prices);
+}
+
+function estimatePeakMarketCap(overview: BirdeyeTokenOverview): number {
+  const currentPrice = safeNumber(overview.price);
+  const liveMarketCap = currentMarketCap(overview);
+  const maxObservedPrice = maxOverviewPrice(overview);
   const supply = safeNumber(overview.supply);
   const priceDerivedPeak = supply > 0 ? maxObservedPrice * supply : 0;
   const currentScaledPeak =
-    currentPrice > 0 && currentMarketCap > 0
-      ? currentMarketCap * (maxObservedPrice / currentPrice)
+    currentPrice > 0 && liveMarketCap > 0
+      ? liveMarketCap * (maxObservedPrice / currentPrice)
       : 0;
 
   return Math.max(
-    currentMarketCap,
+    liveMarketCap,
     safeNumber(overview.realMc),
     priceDerivedPeak,
     currentScaledPeak
@@ -63,11 +74,8 @@ function estimatePeakMarketCap(overview: BirdeyeTokenOverview): number {
 
 function normalizeOverview(overview: BirdeyeTokenOverview) {
   const price = safeNumber(overview.price);
-  const marketCap = safeNumber(
-    overview.mc,
-    safeNumber(overview.realMc, safeNumber(overview.liquidity) * 10)
-  );
-  const history24hPrice = safeNumber(overview.history24hPrice, price);
+  const marketCap = currentMarketCap(overview);
+  const history24hPrice = Math.max(safeNumber(overview.history24hPrice, price), maxOverviewPrice(overview));
   const peakMcap = estimatePeakMarketCap(overview);
   return {
     liquidity: safeNumber(overview.liquidity),
