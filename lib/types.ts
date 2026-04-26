@@ -82,6 +82,13 @@ export interface BirdeyeTokenOverview {
   v24hChangePercent: number;
   holder: number;
   price: number;
+  history30mPrice?: number;
+  history1hPrice?: number;
+  history2hPrice?: number;
+  history4hPrice?: number;
+  history6hPrice?: number;
+  history8hPrice?: number;
+  history12hPrice?: number;
   history24hPrice: number;
   priceChange24hPercent: number;
   supply: number;
@@ -92,19 +99,25 @@ export interface BirdeyeTokenOverview {
 }
 
 export interface BirdeyeTokenSecurity {
-  ownerAddress?: string;
-  creatorAddress?: string;
+  ownerAddress?: string | null;
+  creatorAddress?: string | null;
+  metaplexUpdateAuthority?: string | null;
+  ownerPercentage?: number | null;
+  creatorPercentage?: number | null;
   isToken2022: boolean;
   isTrueToken: boolean;
   totalSupply: number;
-  mutableMetadata: boolean;
-  top10HolderPercent: number;
+  mutableMetadata: boolean | null;
+  top10HolderPercent: number | null;
+  top10HolderBalance?: number | null;
   top10UserPercent?: number;
-  freezeAuthority?: string;
-  mintAuthority?: string;
+  freezeable?: boolean | null;
+  freezeAuthority?: string | null;
+  mintAuthority?: string | null;
   isHoneypot?: boolean;
   transferFeeEnable?: boolean;
   nonTransferable?: boolean;
+  lockInfo?: unknown;
   preMarketHolder?: Array<{ address: string; amount: number; pct: number }>;
 }
 

@@ -1,23 +1,61 @@
 "use client";
 
-const DEATH_MESSAGES = [
-  "☠️ $SAFERUG — Rugged after 4 hours. 1,204 holders left behind.",
-  "⚠️ $ELONCAT — Dev wallet dumped 100% supply. Peak MCap: $2.3M.",
-  "☠️ $TRUSTME — Liquidity removed 92%. The name was a red flag.",
-  "⚠️ $PUMP69 — Classic pump & dump. 6,200 holders rugged.",
-  "☠️ $DEFINOT — LP pulled via mixer. $1.5M peak MCap gone.",
-  "⚠️ $RUGSAFE — The irony. Insurance token rugged at $1.2M.",
-  "☠️ $MOONDOGE — Failed launch. Never reached $10k MCap.",
-  "⚠️ $GHOSTCHAIN — Team disappeared. $80k MCap abandoned.",
-  "☠️ $SLOWDEATH — Down 97% over 3 weeks. Still technically alive.",
-  "⚠️ $YOLOCOIN — 18 holders. $1,800 peak. DOA.",
-  "☠️ $WAGMI2 — Down 96% from ATH. The slow bleed continues.",
-  "⚠️ $GRAVEYARD — Zero volume for 14 days. 340 holders ghosted.",
-];
+import { useState, useEffect } from "react";
+import type { DeadToken } from "@/lib/types";
 
-/** Scrolling death ticker with continuous pure CSS infinite scroll animation */
+function formatMcap(n: number): string {
+  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `$${(n / 1_000).toFixed(0)}k`;
+  return `$${n.toFixed(0)}`;
+}
+
+function tokenToMessage(token: DeadToken): string {
+  const icon = token.verdict === "RUGGED" ? "\u2620\uFE0F" : "\u26A0\uFE0F";
+  return `${icon} $${token.symbol} \u2014 ${token.verdict}. ${formatMcap(token.peakMcap)} peak. ${token.holdersBagged.toLocaleString()} holders.`;
+}
+
 export default function DeathTicker() {
-  const items = [...DEATH_MESSAGES, ...DEATH_MESSAGES];
+  const [messages, setMessages] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/tokens/dead?sort=Most+Recent&filter=ALL+DEAD")
+      .then((r) => r.json())
+      .then((data: { tokens?: DeadToken[] }) => {
+        const tokens = data.tokens ?? [];
+        if (tokens.length > 0) {
+          setMessages(tokens.slice(0, 12).map(tokenToMessage));
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="w-full border-t border-accent/30 border-b border-b-accent/30 bg-dead-ticker overflow-hidden">
+        <div className="py-2.5 text-center">
+          <span className="font-mono text-xs text-white/80 tracking-wider">
+            EXHUMING LIVE BIRDEYE RECORDS...
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  if (messages.length === 0) {
+    return (
+      <div className="w-full border-t border-accent/30 border-b border-b-accent/30 bg-dead-ticker overflow-hidden">
+        <div className="py-2.5 text-center">
+          <span className="font-mono text-xs text-muted tracking-wider">
+            NO BODIES FOUND YET — Connect Birdeye API data to start indexing the graveyard.
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  const items = [...messages, ...messages];
 
   return (
     <div className="w-full border-t border-accent/30 border-b border-b-accent/30 bg-dead-ticker overflow-hidden">
