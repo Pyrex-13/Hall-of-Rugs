@@ -210,11 +210,15 @@ export async function GET(request: Request) {
       );
 
       for (const item of overviewResults) {
-        if (item.status !== "fulfilled" || !item.value.overview) continue;
-        const { candidate, overview } = item.value;
-        const token = buildToken(candidate.address, overview, candidate);
-        if (!token) continue;
-        upsertDeadToken(token);
+        try {
+          if (item.status !== "fulfilled" || !item.value.overview) continue;
+          const { candidate, overview } = item.value;
+          const token = buildToken(candidate.address, overview, candidate);
+          if (!token) continue;
+          upsertDeadToken(token);
+        } catch {
+          continue;
+        }
       }
     } catch {
       // Birdeye API unavailable, fall through to cached data

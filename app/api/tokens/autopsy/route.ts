@@ -83,10 +83,14 @@ function buildOverviewPriceHistory(
     .filter((point) => Number.isFinite(point.close));
 }
 
-function estimatePeakMarketCap(overview: BirdeyeTokenOverview): number {
+function estimatePeakMarketCap(
+  overview: BirdeyeTokenOverview,
+  priceHistory: OHLCVPoint[]
+): number {
   const currentPrice = safeNumber(overview.price);
   const currentMarketCap = safeNumber(overview.mc, safeNumber(overview.realMc));
   const historicalPrices = [
+    ...priceHistory.map((point) => point.close),
     overview.history24hPrice,
     overview.history12hPrice,
     overview.history8hPrice,
@@ -191,7 +195,10 @@ export async function GET(request: Request) {
     const holders = safeNumber(overview.holder);
     const price = safeNumber(overview.price);
     const history24hPrice = safeNumber(overview.history24hPrice, price);
-    const peakMarketCap = estimatePeakMarketCap(overview);
+    const currentPrice = safeNumber(priceData?.value, price);
+    const overviewHistory = buildOverviewPriceHistory(overview, currentPrice);
+    const priceHistory = ohlcv.length > 0 ? ohlcv : overviewHistory;
+    const peakMarketCap = estimatePeakMarketCap(overview, priceHistory);
     const createdAtSeconds = safeNumber(overview.createdAt);
     const lastTradeUnixTime = safeNumber(overview.lastTradeUnixTime);
 
@@ -237,13 +244,11 @@ export async function GET(request: Request) {
       upsertDeadToken(token);
     }
 
-    const currentPrice = safeNumber(priceData?.value, price);
     const securityFlags = buildSecurityFlags(security, overview);
-    const overviewHistory = buildOverviewPriceHistory(overview, currentPrice);
 
     const autopsyResult: AutopsyResult = {
       token,
-      priceHistory: ohlcv.length > 0 ? ohlcv : overviewHistory,
+      priceHistory,
       securityFlags,
       topHoldersPct: holderConcentrationPercent(security),
       currentPrice,
