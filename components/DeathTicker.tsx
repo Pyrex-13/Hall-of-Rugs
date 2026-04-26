@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import type { DeadToken } from "@/lib/types";
 
 function formatMcap(n: number): string {
+  if (!Number.isFinite(n) || n <= 0) return "UNAVAILABLE";
   if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
   if (n >= 1_000) return `$${(n / 1_000).toFixed(0)}k`;
   return `$${n.toFixed(0)}`;
