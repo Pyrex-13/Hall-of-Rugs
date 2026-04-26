@@ -79,12 +79,13 @@ function buildToken(
         timeToDeathHours: Math.max(1, Math.round(metrics.ageHours * 10) / 10),
       };
     } else if (
-      normalized.priceChange24hPercent <= -70 ||
-      metrics.priceDropPct >= 70
+      (normalized.priceChange24hPercent <= -70 || metrics.priceDropPct >= 70) &&
+      normalized.volume24h <= Math.max(1_000, normalized.marketCap * 0.05) &&
+      normalized.liquidity <= Math.max(5_000, normalized.marketCap * 0.1)
     ) {
       result = {
         verdict: "SLOW BLEED",
-        cause: "Real Birdeye data shows a severe drawdown from recent price history",
+        cause: "Real Birdeye data shows severe drawdown with weak volume and thin liquidity",
         brutalityScore: Math.min(
           95,
           Math.max(50, Math.round(Math.max(metrics.priceDropPct, Math.abs(normalized.priceChange24hPercent))))
@@ -164,19 +165,20 @@ export async function GET(request: Request) {
         return true;
       });
 
-      for (const candidate of candidates.slice(0, 30)) {
-        try {
+      const overviewResults = await Promise.allSettled(
+        candidates.slice(0, 24).map(async (candidate) => {
           // Birdeye endpoint: /defi/token_overview
           const overview = await getTokenOverview(candidate.address);
-          if (!overview) continue;
+          return { candidate, overview };
+        })
+      );
 
-          const token = buildToken(candidate.address, overview, candidate);
-          if (!token) continue;
-
-          upsertDeadToken(token);
-        } catch {
-          continue;
-        }
+      for (const item of overviewResults) {
+        if (item.status !== "fulfilled" || !item.value.overview) continue;
+        const { candidate, overview } = item.value;
+        const token = buildToken(candidate.address, overview, candidate);
+        if (!token) continue;
+        upsertDeadToken(token);
       }
     } catch {
       // Birdeye API unavailable, fall through to cached data
