@@ -50,6 +50,11 @@ export async function GET(request: Request) {
 
   seedMockData();
 
+  const indexedToken = getDeadTokenByAddress(address);
+  if (indexedToken && address.startsWith("HoRDead")) {
+    return buildMockAutopsy(indexedToken);
+  }
+
   const apiKey = process.env.BIRDEYE_API_KEY;
 
   if (apiKey) {
@@ -57,9 +62,8 @@ export async function GET(request: Request) {
       // Birdeye endpoint: /defi/token_overview
       const overview = await getTokenOverview(address);
       if (!overview) {
-        const cached = getDeadTokenByAddress(address);
-        if (cached) {
-          return buildMockAutopsy(cached);
+        if (indexedToken) {
+          return buildMockAutopsy(indexedToken);
         }
         return NextResponse.json(
           {
@@ -167,9 +171,8 @@ export async function GET(request: Request) {
     }
   }
 
-  const cached = getDeadTokenByAddress(address);
-  if (cached) {
-    return buildMockAutopsy(cached);
+  if (indexedToken) {
+    return buildMockAutopsy(indexedToken);
   }
 
   return NextResponse.json(

@@ -230,6 +230,28 @@ function rowToDeadToken(row: DeadTokenRow): DeadToken {
 
 export function seedMockData(): void {
   const db = getDb();
+  const legacyMockRows = [
+    ["7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU", "SAFERUG"],
+    ["DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263", "ELONCAT"],
+    ["EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", "MOONDOGE"],
+    ["So11111111111111111111111111111111111111112", "GRAVEYARD"],
+    ["mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So", "SLOWDEATH"],
+    ["4k3Dyjzvzp8eMZWUXbBCjEvwSkkk59S5iCNLY3QrkX6R", "TRUSTME"],
+    ["JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN", "GHOSTCHAIN"],
+    ["Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB", "DEFINOT"],
+    ["HZ1JovNiVvGrGNiiYvEozEVgZ58xaU3RKwX8eACQBCt3", "YOLOCOIN"],
+    ["orcaEKTdK7LKz57vaAYr9QeNsVEPfiu6QeMU1kektZE", "RUGSAFE"],
+    ["AURY1snxMoS7L6dfnMzaKe3VDMSfJ3Lfk6V4P7gRb27P", "WAGMI2"],
+    ["3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh", "PUMP69"],
+  ];
+
+  const deleteLegacyMock = db.prepare(
+    "DELETE FROM dead_tokens WHERE address = ? AND symbol = ?"
+  );
+  for (const [address, symbol] of legacyMockRows) {
+    deleteLegacyMock.run(address, symbol);
+  }
+
   const existing = db
     .prepare("SELECT COUNT(*) as c FROM dead_tokens")
     .get() as { c: number };
@@ -237,7 +259,7 @@ export function seedMockData(): void {
 
   const mockTokens: DeadToken[] = [
     {
-      address: "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU",
+      address: "HoRDead1111111111111111111111111111111111",
       symbol: "SAFERUG",
       name: "SafeRug Protocol",
       verdict: "RUGGED",
@@ -254,7 +276,7 @@ export function seedMockData(): void {
       brutalityScore: 97,
     },
     {
-      address: "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263",
+      address: "HoRDead2222222222222222222222222222222222",
       symbol: "ELONCAT",
       name: "Elon's Cat Token",
       verdict: "RUGGED",
@@ -271,7 +293,7 @@ export function seedMockData(): void {
       brutalityScore: 99,
     },
     {
-      address: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+      address: "HoRDead3333333333333333333333333333333333",
       symbol: "MOONDOGE",
       name: "MoonDoge Inu",
       verdict: "FAILED LAUNCH",
@@ -288,7 +310,7 @@ export function seedMockData(): void {
       brutalityScore: 45,
     },
     {
-      address: "So11111111111111111111111111111111111111112",
+      address: "HoRDead4444444444444444444444444444444444",
       symbol: "GRAVEYARD",
       name: "Graveyard Finance",
       verdict: "ABANDONED",
@@ -306,7 +328,7 @@ export function seedMockData(): void {
       brutalityScore: 72,
     },
     {
-      address: "mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So",
+      address: "HoRDead5555555555555555555555555555555555",
       symbol: "SLOWDEATH",
       name: "SlowDeath Token",
       verdict: "SLOW BLEED",
@@ -323,7 +345,7 @@ export function seedMockData(): void {
       brutalityScore: 55,
     },
     {
-      address: "4k3Dyjzvzp8eMZWUXbBCjEvwSkkk59S5iCNLY3QrkX6R",
+      address: "HoRDead6666666666666666666666666666666666",
       symbol: "TRUSTME",
       name: "TrustMe Coin",
       verdict: "RUGGED",
@@ -340,7 +362,7 @@ export function seedMockData(): void {
       brutalityScore: 95,
     },
     {
-      address: "JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN",
+      address: "HoRDead7777777777777777777777777777777777",
       symbol: "GHOSTCHAIN",
       name: "GhostChain AI",
       verdict: "ABANDONED",
@@ -358,7 +380,7 @@ export function seedMockData(): void {
       brutalityScore: 68,
     },
     {
-      address: "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB",
+      address: "HoRDead8888888888888888888888888888888888",
       symbol: "DEFINOT",
       name: "DefiNot a Scam",
       verdict: "RUGGED",
@@ -375,7 +397,7 @@ export function seedMockData(): void {
       brutalityScore: 96,
     },
     {
-      address: "HZ1JovNiVvGrGNiiYvEozEVgZ58xaU3RKwX8eACQBCt3",
+      address: "HoRDead9999999999999999999999999999999999",
       symbol: "YOLOCOIN",
       name: "YOLO Finance",
       verdict: "FAILED LAUNCH",
@@ -392,7 +414,7 @@ export function seedMockData(): void {
       brutalityScore: 40,
     },
     {
-      address: "orcaEKTdK7LKz57vaAYr9QeNsVEPfiu6QeMU1kektZE",
+      address: "HoRDeadAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
       symbol: "RUGSAFE",
       name: "RugSafe Insurance",
       verdict: "RUGGED",
@@ -409,7 +431,7 @@ export function seedMockData(): void {
       brutalityScore: 98,
     },
     {
-      address: "AURY1snxMoS7L6dfnMzaKe3VDMSfJ3Lfk6V4P7gRb27P",
+      address: "HoRDeadBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB",
       symbol: "WAGMI2",
       name: "WAGMI 2.0",
       verdict: "SLOW BLEED",
@@ -426,7 +448,7 @@ export function seedMockData(): void {
       brutalityScore: 52,
     },
     {
-      address: "3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh",
+      address: "HoRDeadCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC",
       symbol: "PUMP69",
       name: "PumpAndDump69",
       verdict: "RUGGED",
