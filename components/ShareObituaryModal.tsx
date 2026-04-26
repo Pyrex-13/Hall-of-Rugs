@@ -8,12 +8,14 @@ const CARD_H = 480;
 const PAD = 32;
 
 function formatMcap(n: number): string {
+  if (!Number.isFinite(n)) return "$0";
   if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
   if (n >= 1_000) return `$${(n / 1_000).toFixed(0)}k`;
   return `$${n.toFixed(0)}`;
 }
 
 function formatDuration(hours: number): string {
+  if (!Number.isFinite(hours) || hours <= 0) return "N/A";
   if (hours < 1) return `${Math.round(hours * 60)}m`;
   if (hours < 24) return `${Math.round(hours)}h`;
   const days = Math.round(hours / 24);
@@ -21,7 +23,12 @@ function formatDuration(hours: number): string {
 }
 
 function formatNumber(n: number): string {
+  if (!Number.isFinite(n)) return "0";
   return n.toLocaleString("en-US");
+}
+
+function formatPercent(n: number): string {
+  return Number.isFinite(n) ? `${n.toFixed(1)}%` : "N/A";
 }
 
 function truncate(s: string, max: number): string {
@@ -34,8 +41,8 @@ function buildTweetText(t: DeadToken): string {
     "",
     `Verdict: ${t.verdict}`,
     `Peak MCap: ${formatMcap(t.peakMcap)} \u2192 ${formatMcap(t.finalMcap)}`,
-    `Lost: ${t.priceDropPct.toFixed(1)}%`,
-    `Liquidity Removed: ${t.liquidityRemovedPct}%`,
+    `Lost: ${formatPercent(t.priceDropPct)}`,
+    `Liquidity Removed: ${formatPercent(t.liquidityRemovedPct)}`,
     `Holders Bagged: ${formatNumber(t.holdersBagged)}`,
     `Time to Death: ${formatDuration(t.timeToDeathHours)}`,
     "",
@@ -104,7 +111,7 @@ function drawCard(canvas: HTMLCanvasElement, token: DeadToken): void {
   const statValues = [
     formatMcap(token.peakMcap),
     formatMcap(token.finalMcap),
-    `${token.priceDropPct.toFixed(1)}%`,
+    formatPercent(token.priceDropPct),
   ];
   const statColors = ["#ffffff", "#dc2626", "#dc2626"];
 
@@ -123,7 +130,7 @@ function drawCard(canvas: HTMLCanvasElement, token: DeadToken): void {
 
   const stat2Labels = ["LIQ REMOVED", "HOLDERS BAGGED", "TIME TO DEATH"];
   const stat2Values = [
-    `${token.liquidityRemovedPct}%`,
+    formatPercent(token.liquidityRemovedPct),
     formatNumber(token.holdersBagged),
     formatDuration(token.timeToDeathHours),
   ];
@@ -156,13 +163,16 @@ function drawCard(canvas: HTMLCanvasElement, token: DeadToken): void {
   ctx.fillStyle = "#1a1a1a";
   ctx.fillRect(PAD, y, barW, barH);
   ctx.fillStyle = "#dc2626";
-  ctx.fillRect(PAD, y, barW * Math.min(token.brutalityScore, 100) / 100, barH);
+  const brutalityScore = Number.isFinite(token.brutalityScore)
+    ? Math.max(0, Math.min(token.brutalityScore, 100))
+    : 0;
+  ctx.fillRect(PAD, y, (barW * brutalityScore) / 100, barH);
 
   ctx.font = "10px 'JetBrains Mono', monospace";
   ctx.fillStyle = "#525252";
   ctx.fillText("BRUTALITY", PAD, y + barH + 10);
   ctx.fillStyle = "#dc2626";
-  const scoreText = `${token.brutalityScore}/100`;
+  const scoreText = `${Math.round(brutalityScore)}/100`;
   const scoreW = ctx.measureText(scoreText).width;
   ctx.fillText(scoreText, CARD_W - PAD - scoreW, y + barH + 10);
   y += barH + 28;
@@ -224,7 +234,7 @@ export default function ShareObituaryModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
       onClick={onClose}
     >
       <div
@@ -240,7 +250,7 @@ export default function ShareObituaryModal({
         </button>
 
         <p className="font-mono text-[10px] text-muted tracking-wider mb-4">
-          RUG PNL CARD &mdash; ${ token.symbol }
+          RUG PNL CARD &mdash; ${token.symbol}
         </p>
 
         <div className="flex justify-center mb-5 overflow-x-auto">

@@ -239,7 +239,7 @@ export function purgeDemoData(): void {
     `DELETE FROM dead_tokens WHERE address LIKE 'HoRDead%'`
   ).run();
   const deleteBySymbol = db.prepare(
-    "DELETE FROM dead_tokens WHERE symbol = ? AND address LIKE 'HoRDead%'"
+    "DELETE FROM dead_tokens WHERE symbol = ?"
   );
   for (const sym of demoSymbols) {
     deleteBySymbol.run(sym);

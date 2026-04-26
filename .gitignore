@@ -5,3 +5,4 @@ api_calls.log
 .env
 .env.local
 *.sqlite
+*.tsbuildinfo

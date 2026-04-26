@@ -62,6 +62,7 @@ export async function GET(request: Request) {
   }
 
   try {
+    // Birdeye endpoint: /defi/token_overview
     const overview = await getTokenOverview(address);
     if (!overview) {
       const indexedToken = getDeadTokenByAddress(address);
@@ -77,11 +78,13 @@ export async function GET(request: Request) {
       );
     }
 
+    // Birdeye endpoint: /defi/token_security
     const security = await getTokenSecurity(address);
 
     const createdAt = overview.createdAt
       ? overview.createdAt
       : Math.floor(Date.now() / 1000) - 7 * 24 * 60 * 60;
+    // Birdeye endpoint: /defi/ohlcv
     const ohlcv = await getTokenOHLCV(
       address,
       createdAt,
@@ -89,6 +92,7 @@ export async function GET(request: Request) {
       "1H"
     );
 
+    // Birdeye endpoint: /defi/price
     const priceData = await getTokenPrice(address);
 
     const liquidity = safeNumber(overview.liquidity);
@@ -186,9 +190,9 @@ function buildCachedAutopsy(token: DeadToken): NextResponse {
       },
     ],
     topHoldersPct: 0,
-    currentPrice: token.finalMcap / 1_000_000,
-    currentLiquidity: token.finalMcap * 0.1,
-    peakLiquidity: token.peakMcap * 0.3,
+    currentPrice: 0,
+    currentLiquidity: 0,
+    peakLiquidity: 0,
   };
 
   return NextResponse.json(result);

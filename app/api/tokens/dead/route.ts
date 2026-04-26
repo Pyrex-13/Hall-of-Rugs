@@ -25,7 +25,9 @@ export async function GET(request: Request) {
   const apiKey = process.env.BIRDEYE_API_KEY;
   if (apiKey) {
     try {
+      // Birdeye endpoint: /defi/v2/tokens/new_listing
       const newListings = await getNewListings(20);
+      // Birdeye endpoint: /defi/token_trending
       const trending = await getTrendingTokens();
 
       const allAddresses = new Set<string>();
@@ -50,6 +52,7 @@ export async function GET(request: Request) {
 
       for (const candidate of candidates.slice(0, 10)) {
         try {
+          // Birdeye endpoint: /defi/token_overview
           const overview = await getTokenOverview(candidate.address);
           if (!overview) continue;
 
