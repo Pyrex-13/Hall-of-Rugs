@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import type { AutopsyResult } from "@/lib/types";
 import PriceDeathChart from "./PriceDeathChart";
+import ShareObituaryModal from "./ShareObituaryModal";
 
 function formatDate(ts: number): string {
   if (!Number.isFinite(ts) || ts <= 0) return "Unknown";
@@ -58,7 +59,7 @@ export default function AutopsyReport({
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<AutopsyResult | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
+  const [showShare, setShowShare] = useState(false);
 
   useEffect(() => {
     const minDelay = new Promise((r) => setTimeout(r, 800));
@@ -88,12 +89,7 @@ export default function AutopsyReport({
 
   const handleShare = () => {
     if (!data) return;
-    const t = data.token;
-    const tweetText = `☠️ DEATH CERTIFICATE — $${t.symbol}\n\nVerdict: ${t.verdict}\nPeak MCap: ${formatMcap(t.peakMcap)}\nLiquidity Removed: ${t.liquidityRemovedPct}%\nHolders Bagged: ${formatNumber(t.holdersBagged)}\n\n"${t.oneLiner}"\n\nAutopsy by Hall of Rugs\n#BirdeyeAPI @birdeye_data`;
-    navigator.clipboard.writeText(tweetText).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
+    setShowShare(true);
   };
 
   if (loading) {
@@ -329,9 +325,16 @@ export default function AutopsyReport({
           onClick={handleShare}
           className="font-mono text-xs tracking-wider border border-accent text-accent bg-transparent px-4 py-2 rounded-[4px] transition-all duration-200 hover:bg-accent hover:text-black"
         >
-          {copied ? "COPIED ✓" : "SHARE OBITUARY"}
+          SHARE OBITUARY
         </button>
       </div>
+
+      {showShare && (
+        <ShareObituaryModal
+          token={token}
+          onClose={() => setShowShare(false)}
+        />
+      )}
     </div>
   );
 }

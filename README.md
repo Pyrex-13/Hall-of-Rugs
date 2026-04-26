@@ -78,7 +78,7 @@ Open [http://localhost:3000](http://localhost:3000).
 | `FAILED_LAUNCH_MCAP_THRESHOLD` | Max peak MCap for FAILED LAUNCH | `10000` |
 | `ABANDONED_VOLUME_DAYS` | Days of zero volume for ABANDONED | `7` |
 
-The app renders fully with realistic mock data when `BIRDEYE_API_KEY` is absent — no setup required for local preview.
+All data is real. Without `BIRDEYE_API_KEY`, discovery and autopsy routes return empty results or a 503 error — no mock or placeholder data is rendered.
 
 ## API Call Logging
 

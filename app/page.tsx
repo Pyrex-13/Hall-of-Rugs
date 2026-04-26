@@ -161,8 +161,11 @@ export default function HomePage() {
           </div>
         ) : tokens.length === 0 ? (
           <div className="text-center py-20">
-            <p className="font-mono text-muted text-sm">
-              No dead tokens found for this filter.
+            <p className="font-mono text-accent text-lg tracking-wider mb-2">
+              NO BODIES FOUND YET
+            </p>
+            <p className="font-mono text-muted text-xs">
+              Connect Birdeye API data to start indexing the graveyard.
             </p>
           </div>
         ) : (

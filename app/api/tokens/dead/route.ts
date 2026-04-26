@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import {
   getDeadTokens,
-  seedMockData,
+  purgeDemoData,
   upsertDeadToken,
 } from "@/lib/db";
 import {
@@ -11,7 +11,7 @@ import {
 } from "@/lib/birdeye";
 import { classify, computeMetrics } from "@/lib/classifier";
 import { getOneLiner } from "@/lib/oneliner";
-import type { DeadToken, Verdict } from "@/lib/types";
+import type { DeadToken } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -20,14 +20,12 @@ export async function GET(request: Request) {
   const filter = searchParams.get("filter") ?? "ALL DEAD";
   const sort = searchParams.get("sort") ?? "Most Recent";
 
-  seedMockData();
+  purgeDemoData();
 
   const apiKey = process.env.BIRDEYE_API_KEY;
   if (apiKey) {
     try {
-      // Birdeye endpoint: /defi/v2/tokens/new_listing
       const newListings = await getNewListings(20);
-      // Birdeye endpoint: /defi/token_trending
       const trending = await getTrendingTokens();
 
       const allAddresses = new Set<string>();
@@ -52,7 +50,6 @@ export async function GET(request: Request) {
 
       for (const candidate of candidates.slice(0, 10)) {
         try {
-          // Birdeye endpoint: /defi/token_overview
           const overview = await getTokenOverview(candidate.address);
           if (!overview) continue;
 
@@ -100,10 +97,20 @@ export async function GET(request: Request) {
         }
       }
     } catch {
-      // Birdeye API unavailable, fall through to cached/mock data
+      // Birdeye API unavailable, fall through to cached data
     }
   }
 
   const tokens = getDeadTokens(filter, sort, 50);
+
+  if (!apiKey && tokens.length === 0) {
+    return NextResponse.json({
+      tokens: [],
+      filter,
+      sort,
+      message: "Birdeye API key is required for live token discovery.",
+    });
+  }
+
   return NextResponse.json({ tokens, filter, sort });
 }

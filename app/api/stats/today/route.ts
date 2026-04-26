@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
-import { getTodayStats, seedMockData } from "@/lib/db";
+import { getTodayStats, purgeDemoData } from "@/lib/db";
 import type { DayStats } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  seedMockData();
+  purgeDemoData();
 
   const raw = getTodayStats();
 
