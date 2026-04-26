@@ -26,6 +26,17 @@ function isValidSolanaAddress(address: string): boolean {
   return /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(address);
 }
 
+function safeNumber(value: unknown, fallback = 0): number {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+function safeText(value: unknown, fallback: string): string {
+  return typeof value === "string" && value.trim().length > 0
+    ? value
+    : fallback;
+}
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const address = searchParams.get("address") ?? "";
@@ -76,38 +87,48 @@ export async function GET(request: Request) {
       // Birdeye endpoint: /defi/price
       const priceData = await getTokenPrice(address);
 
+      const liquidity = safeNumber(overview.liquidity);
+      const marketCap = safeNumber(overview.mc);
+      const volume24h = safeNumber(overview.v24hUSD);
+      const holders = safeNumber(overview.holder);
+      const price = safeNumber(overview.price);
+      const history24hPrice = safeNumber(overview.history24hPrice, price);
+      const realMarketCap = safeNumber(overview.realMc, marketCap > 0 ? marketCap * 1.2 : 0);
+      const createdAtSeconds = safeNumber(overview.createdAt);
+      const lastTradeUnixTime = safeNumber(overview.lastTradeUnixTime);
+
       const metrics = computeMetrics({
-        liquidity: overview.liquidity,
-        mc: overview.mc,
-        v24hUSD: overview.v24hUSD,
-        holder: overview.holder,
-        price: overview.price,
-        history24hPrice: overview.history24hPrice,
-        createdAt: overview.createdAt
-          ? overview.createdAt * 1000
+        liquidity,
+        mc: marketCap,
+        v24hUSD: volume24h,
+        holder: holders,
+        price,
+        history24hPrice,
+        createdAt: createdAtSeconds
+          ? createdAtSeconds * 1000
           : undefined,
-        lastTradeUnixTime: overview.lastTradeUnixTime,
-        peakMcap: overview.realMc ?? overview.mc * 1.2,
+        lastTradeUnixTime,
+        peakMcap: realMarketCap,
       });
 
       const result = classify(metrics);
 
       const token: DeadToken = {
         address,
-        symbol: overview.symbol,
-        name: overview.name,
+        symbol: safeText(overview.symbol, address.slice(0, 4).toUpperCase()),
+        name: safeText(overview.name, "Unknown Solana Token"),
         verdict: result.verdict,
         cause: result.cause,
         oneLiner: getOneLiner(result.verdict),
-        bornAt: overview.createdAt
-          ? overview.createdAt * 1000
+        bornAt: createdAtSeconds
+          ? createdAtSeconds * 1000
           : Date.now() - result.timeToDeathHours * 60 * 60 * 1000,
         diedAt:
           result.verdict === "STILL ALIVE" ? 0 : Date.now(),
         peakMcap: metrics.peakMcap,
-        finalMcap: overview.mc,
+        finalMcap: marketCap,
         liquidityRemovedPct: metrics.liquidityRemovedPct,
-        holdersBagged: overview.holder,
+        holdersBagged: holders,
         priceDropPct: metrics.priceDropPct,
         timeToDeathHours: result.timeToDeathHours,
         brutalityScore: result.brutalityScore,
@@ -131,13 +152,13 @@ export async function GET(request: Request) {
                 result.verdict
               ),
         securityFlags,
-        topHoldersPct: security?.top10HolderPercent ?? 0,
-        currentPrice: priceData?.value ?? overview.price,
-        currentLiquidity: overview.liquidity,
+        topHoldersPct: safeNumber(security?.top10HolderPercent),
+        currentPrice: safeNumber(priceData?.value, price),
+        currentLiquidity: liquidity,
         peakLiquidity:
           metrics.liquidityRemovedPct >= 100
-            ? overview.liquidity
-            : overview.liquidity / (1 - metrics.liquidityRemovedPct / 100),
+            ? liquidity
+            : liquidity / (1 - metrics.liquidityRemovedPct / 100),
       };
 
       return NextResponse.json(autopsyResult);

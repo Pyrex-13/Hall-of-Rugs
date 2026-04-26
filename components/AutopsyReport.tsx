@@ -5,7 +5,7 @@ import type { AutopsyResult } from "@/lib/types";
 import PriceDeathChart from "./PriceDeathChart";
 
 function formatDate(ts: number): string {
-  if (!ts) return "Unknown";
+  if (!Number.isFinite(ts) || ts <= 0) return "Unknown";
   return new Date(ts).toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
@@ -16,6 +16,7 @@ function formatDate(ts: number): string {
 }
 
 function formatDuration(hours: number): string {
+  if (!Number.isFinite(hours) || hours <= 0) return "Unknown";
   if (hours < 1) return `${Math.round(hours * 60)} minutes`;
   if (hours < 24) return `${Math.round(hours)} hours`;
   const days = Math.round(hours / 24);
@@ -25,12 +26,14 @@ function formatDuration(hours: number): string {
 }
 
 function formatMcap(n: number): string {
+  if (!Number.isFinite(n)) return "$0.00";
   if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(2)}M`;
   if (n >= 1_000) return `$${(n / 1_000).toFixed(1)}k`;
   return `$${n.toFixed(2)}`;
 }
 
 function formatPrice(n: number): string {
+  if (!Number.isFinite(n)) return "$0.00";
   if (n < 0.000001) return `$${n.toExponential(2)}`;
   if (n < 0.01) return `$${n.toFixed(8)}`;
   if (n < 1) return `$${n.toFixed(6)}`;
@@ -38,7 +41,12 @@ function formatPrice(n: number): string {
 }
 
 function formatNumber(n: number): string {
+  if (!Number.isFinite(n)) return "0";
   return n.toLocaleString("en-US");
+}
+
+function safeNumber(value: number | null | undefined): number {
+  return typeof value === "number" && Number.isFinite(value) ? value : 0;
 }
 
 /** Full autopsy report for a single dead token including chart, security flags, and verdict */
@@ -116,8 +124,13 @@ export default function AutopsyReport({
 
   if (!data) return null;
 
-  const { token, priceHistory, securityFlags, topHoldersPct, currentPrice } =
-    data;
+  const { token, currentPrice } = data;
+  const priceHistory = Array.isArray(data.priceHistory) ? data.priceHistory : [];
+  const securityFlags = Array.isArray(data.securityFlags) ? data.securityFlags : [];
+  const topHoldersPct = safeNumber(data.topHoldersPct);
+  const addressLabel = token.address
+    ? `${token.address.slice(0, 8)}...${token.address.slice(-6)}`
+    : "Unknown address";
 
   return (
     <div className="max-w-4xl mx-auto opacity-0 animate-fade-up">
@@ -132,8 +145,7 @@ export default function AutopsyReport({
             </span>
           </div>
           <p className="font-mono text-muted text-sm mt-2">
-            ${token.symbol} — {token.address.slice(0, 8)}...
-            {token.address.slice(-6)}
+            ${token.symbol || "UNKNOWN"} — {addressLabel}
           </p>
         </div>
         <span
@@ -183,7 +195,7 @@ export default function AutopsyReport({
             BRUTALITY
           </p>
           <p className="font-mono text-sm text-accent">
-            {token.brutalityScore}/100
+            {safeNumber(token.brutalityScore)}/100
           </p>
         </div>
       </div>
@@ -218,7 +230,7 @@ export default function AutopsyReport({
             LIQUIDITY REMOVED
           </p>
           <p className="font-mono text-lg text-accent">
-            {token.liquidityRemovedPct}%
+            {safeNumber(token.liquidityRemovedPct)}%
           </p>
         </div>
         <div className="bg-surface border border-border rounded-[4px] p-4">
@@ -234,7 +246,7 @@ export default function AutopsyReport({
             PRICE DROP
           </p>
           <p className="font-mono text-lg text-accent">
-            {token.priceDropPct.toFixed(2)}%
+            {safeNumber(token.priceDropPct).toFixed(2)}%
           </p>
         </div>
       </div>

@@ -18,6 +18,7 @@ interface ChartDataPoint {
 }
 
 function formatAxisTime(ts: number): string {
+  if (!Number.isFinite(ts)) return "Unknown";
   return new Date(ts).toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
@@ -25,6 +26,7 @@ function formatAxisTime(ts: number): string {
 }
 
 function formatPrice(n: number): string {
+  if (!Number.isFinite(n)) return "$0.00";
   if (n < 0.000001) return `$${n.toExponential(2)}`;
   if (n < 0.01) return `$${n.toFixed(8)}`;
   if (n < 1) return `$${n.toFixed(6)}`;
@@ -37,12 +39,19 @@ export default function PriceDeathChart({
 }: {
   data: OHLCVPoint[];
 }) {
-  const chartData: ChartDataPoint[] = data.map((p) => ({
-    time: formatAxisTime(p.timestamp),
-    timestamp: p.timestamp,
-    price: p.close,
-    volume: p.volume,
-  }));
+  const chartData: ChartDataPoint[] = data
+    .map((p) => ({
+      time: formatAxisTime(Number(p.timestamp)),
+      timestamp: Number(p.timestamp),
+      price: Number(p.close),
+      volume: Number(p.volume),
+    }))
+    .filter(
+      (p) =>
+        Number.isFinite(p.timestamp) &&
+        Number.isFinite(p.price) &&
+        Number.isFinite(p.volume)
+    );
 
   if (chartData.length === 0) {
     return (

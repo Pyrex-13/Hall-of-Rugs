@@ -30,14 +30,13 @@ function logApiCall(
   const line = `[${timestamp}] [${endpoint}] [${tokenAddress}] [${statusCode}]\n`;
   for (const logFile of LOG_FILES) {
     try {
+      fs.mkdirSync(path.dirname(logFile), { recursive: true });
       fs.appendFileSync(logFile, line);
       return;
     } catch {
       continue;
     }
   }
-
-  console.warn("Failed to write API log:", line);
 }
 
 async function birdeyeFetch<T>(
@@ -139,14 +138,24 @@ export async function getTokenOHLCV(
     }
   );
   if (!data?.items) return [];
-  return data.items.map((item) => ({
-    timestamp: item.unixTime * 1000,
-    open: item.o,
-    high: item.h,
-    low: item.l,
-    close: item.c,
-    volume: item.v,
-  }));
+  return data.items
+    .map((item) => ({
+      timestamp: Number(item.unixTime) * 1000,
+      open: Number(item.o),
+      high: Number(item.h),
+      low: Number(item.l),
+      close: Number(item.c),
+      volume: Number(item.v),
+    }))
+    .filter(
+      (item) =>
+        Number.isFinite(item.timestamp) &&
+        Number.isFinite(item.open) &&
+        Number.isFinite(item.high) &&
+        Number.isFinite(item.low) &&
+        Number.isFinite(item.close) &&
+        Number.isFinite(item.volume)
+    );
 }
 
 // Birdeye endpoint: /defi/price
