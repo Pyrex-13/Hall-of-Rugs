@@ -109,6 +109,7 @@ export interface BirdeyeTokenSecurity {
   totalSupply: number;
   mutableMetadata: boolean | null;
   top10HolderPercent: number | null;
+  top10HolderBalance?: number | null;
   top10UserPercent?: number;
   freezeable?: boolean | null;
   freezeAuthority?: string | null;

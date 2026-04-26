@@ -16,6 +16,7 @@ function tokenToMessage(token: DeadToken): string {
 
 export default function DeathTicker() {
   const [messages, setMessages] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetch("/api/tokens/dead?sort=Most+Recent&filter=ALL+DEAD")
@@ -26,8 +27,21 @@ export default function DeathTicker() {
           setMessages(tokens.slice(0, 12).map(tokenToMessage));
         }
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, []);
+
+  if (loading) {
+    return (
+      <div className="w-full border-t border-accent/30 border-b border-b-accent/30 bg-dead-ticker overflow-hidden">
+        <div className="py-2.5 text-center">
+          <span className="font-mono text-xs text-white/80 tracking-wider">
+            EXHUMING LIVE BIRDEYE RECORDS...
+          </span>
+        </div>
+      </div>
+    );
+  }
 
   if (messages.length === 0) {
     return (

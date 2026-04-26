@@ -37,9 +37,18 @@ function safeText(value: unknown, fallback: string): string {
     : fallback;
 }
 
-function normalizePercent(value: unknown): number {
-  const n = safeNumber(value);
-  return n > 0 && n <= 1 ? n * 100 : n;
+function holderConcentrationPercent(security: {
+  top10HolderPercent?: number | null;
+  top10HolderBalance?: number | null;
+  totalSupply?: number | null;
+} | null): number {
+  if (!security) return 0;
+  const balance = safeNumber(security.top10HolderBalance, NaN);
+  const supply = safeNumber(security.totalSupply, NaN);
+  if (Number.isFinite(balance) && Number.isFinite(supply) && supply > 0) {
+    return (balance / supply) * 100;
+  }
+  return safeNumber(security.top10HolderPercent);
 }
 
 function buildOverviewPriceHistory(
@@ -204,7 +213,7 @@ export async function GET(request: Request) {
       token,
       priceHistory: ohlcv.length > 0 ? ohlcv : overviewHistory,
       securityFlags,
-      topHoldersPct: normalizePercent(security?.top10HolderPercent),
+      topHoldersPct: holderConcentrationPercent(security),
       currentPrice,
       currentLiquidity: liquidity,
       peakLiquidity:
@@ -259,6 +268,8 @@ function buildSecurityFlags(
     freezeable?: boolean | null;
     mutableMetadata: boolean | null;
     top10HolderPercent: number | null;
+    top10HolderBalance?: number | null;
+    totalSupply?: number | null;
     isHoneypot?: boolean;
     transferFeeEnable?: boolean;
     nonTransferable?: boolean;
@@ -295,7 +306,7 @@ function buildSecurityFlags(
 
   const flags: SecurityFlag[] = [];
   const mintAuthority = security.mintAuthority;
-  const top10HolderPercent = normalizePercent(security.top10HolderPercent);
+  const top10HolderPercent = holderConcentrationPercent(security);
 
   flags.push({
     label: "Mint Authority",
