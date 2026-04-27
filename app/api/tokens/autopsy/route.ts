@@ -181,15 +181,11 @@ function classifyDegradedToken(
     };
   }
 
-  if (
-    market.peakMcap > 0 &&
-    market.peakMcap < 10_000 &&
-    (market.volume24h < 100 || market.holders < 50)
-  ) {
+  if (market.marketCap > 0 && market.marketCap < 10_000) {
     return {
       verdict: "FAILED LAUNCH",
-      cause: "Real Birdeye data shows sub-$10k market cap with dried-up launch activity",
-      brutalityScore: Math.max(25, Math.round(metrics.priceDropPct / 2)),
+      cause: "Real Birdeye data shows current market cap below $10k",
+      brutalityScore: Math.max(30, Math.round(Math.max(metrics.priceDropPct, 60) / 2)),
       timeToDeathHours: Math.max(1, Math.round(metrics.ageHours * 10) / 10),
     };
   }

@@ -130,15 +130,11 @@ function buildToken(
         brutalityScore: Math.min(100, Math.max(75, Math.round(metrics.priceDropPct))),
         timeToDeathHours: Math.max(1, Math.round(metrics.ageHours * 10) / 10),
       };
-    } else if (
-      normalized.peakMcap > 0 &&
-      normalized.peakMcap < 10_000 &&
-      (normalized.volume24h < 100 || normalized.holders < 50)
-    ) {
+    } else if (normalized.marketCap > 0 && normalized.marketCap < 10_000) {
       result = {
         verdict: "FAILED LAUNCH",
-        cause: "Real Birdeye data shows sub-$10k market cap with dried-up launch activity",
-        brutalityScore: Math.max(25, Math.round(metrics.priceDropPct / 2)),
+        cause: "Real Birdeye data shows current market cap below $10k",
+        brutalityScore: Math.max(30, Math.round(Math.max(metrics.priceDropPct, 60) / 2)),
         timeToDeathHours: Math.max(1, Math.round(metrics.ageHours * 10) / 10),
       };
     } else if (
